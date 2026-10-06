@@ -1,0 +1,50 @@
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ${{ matrix.so }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        so: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # O juiz e a FRACAO EXATA que todo numero de precisao dupla realmente e:
+      # um inteiro de 53 bits vezes dois elevado a alguma coisa. Converter,
+      # contar com inteiros grandes e comparar nao da "a resposta de referencia",
+      # da A RESPOSTA, e a distancia ate ela e o erro medido e nao estimado.
+      #
+      # Rodar em tres sistemas importa mais aqui do que em qualquer outro
+      # repositorio: a aritmetica de ponto flutuante e exatamente o que esta
+      # sendo medido, e se ela diferisse entre sistemas, a tabela de digitos
+      # corretos seria tres tabelas. O padrao promete que nao, e esta e a
+      # conferencia.
+      - name: testes
+        run: dotnet test testes/Precisao.Testes/Precisao.Testes.csproj -c Release --nologo -v q
+
+      - name: o que o computador realmente guarda
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- juiz
+
+      # As quatro somas somam os mesmos numeros e dao respostas diferentes.
+      - name: as quatro somas contra a soma exata
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- soma
+
+      # A formula de Bhaskara do livro perde quase todos os digitos de uma das
+      # raizes, e a variancia de uma passada chega a dar NEGATIVA.
+      - name: o cancelamento catastrofico
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- cancelamento
+
+      - name: dinheiro, e onde os centavos somem de verdade
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- dinheiro
